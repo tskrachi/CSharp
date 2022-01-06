@@ -65,60 +65,54 @@ namespace DetectUSB
             string nowTime = DateTime.Now.ToString("HH:mm:ss.ff ");
             Console.WriteLine("{2}:前回件数:{0},今回件数{1}", usbDevicesBefore.Count, usbDevices.Count,nowTime);
 
-            if (usbDevices.Count > numBeforeUsbDevices)
+            foreach( var usbDevice in usbDevices)
             {
-                // 今回検出件数＞前回検出件数 ⇒ 追加
-                foreach( var usbDevice in usbDevices)
-                {
-                    bool bExistDevice = false;
+                bool bExistDevice = false;
 
-                    // 前回検出したレコードと比較する
-                    foreach (var usbDeviceBefore in usbDevicesBefore)
-                    {
-                        if (usbDevice.DeviceID == usbDeviceBefore.DeviceID)
-                        {
-                            // 同一のデバイスIDが見つかれば、検索を中止する
-                            bExistDevice = true;
-                            break;
-                        }
-                    }
-
-                    if (!bExistDevice)
-                    {
-                        // 前回のレコードに今回のデバイスIDが見つからなかったら、追加されたデバイスとみなす
-                        string sTemp = string.Format("Add Device ID: {0}", usbDevice.DeviceID);
-                        AddMessage(nowTime + sTemp + Environment.NewLine);
-                        AddListView(nowTime, "Add", usbDevice);
-                    }
-                }
-            }
-            else if (usbDevices.Count < numBeforeUsbDevices)
-            {
-                // 今回検出件数＜前回検出件数 ⇒ 削除
+                // 前回検出したレコードと比較する
                 foreach (var usbDeviceBefore in usbDevicesBefore)
                 {
-                    bool bExistDevice = false;
-
-                    // 今回検出したレコードと比較する
-                    foreach (var usbDevice in usbDevices)
+                    if (usbDevice.DeviceID == usbDeviceBefore.DeviceID)
                     {
-                        if (usbDeviceBefore.DeviceID == usbDevice.DeviceID)
-                        {
-                            // 同一のデバイスIDが見つかれば、検索を中止する
-                            bExistDevice = true;
-                            break;
-                        }
-                    }
-
-                    if (bExistDevice)
-                    {
-                        // 今回のレコードに前回のレコードが見つからなければ、削除されたデバイスとみなす
-                        string sTemp = string.Format("Del Device ID: {0}", usbDeviceBefore.DeviceID);
-                        AddMessage(nowTime + sTemp + Environment.NewLine);
-                        AddListView(nowTime, "Del", usbDeviceBefore);
+                        // 同一のデバイスIDが見つかれば、検索を中止する
+                        bExistDevice = true;
+                        break;
                     }
                 }
+
+                if (!bExistDevice)
+                {
+                    // 前回のレコードに今回のデバイスIDが見つからなかったら、追加されたデバイスとみなす
+                    string sTemp = string.Format("Add Device ID: {0}", usbDevice.DeviceID);
+                    AddMessage(nowTime + sTemp + Environment.NewLine);
+                    AddListView(nowTime, "Add", usbDevice);
+                }
             }
+
+            foreach (var usbDeviceBefore in usbDevicesBefore)
+            {
+                bool bExistDevice = false;
+
+                // 今回検出したレコードと比較する
+                foreach (var usbDevice in usbDevices)
+                {
+                    if (usbDeviceBefore.DeviceID == usbDevice.DeviceID)
+                    {
+                        // 同一のデバイスIDが見つかれば、検索を中止する
+                        bExistDevice = true;
+                        break;
+                    }
+                }
+
+                if (bExistDevice)
+                {
+                    // 今回のレコードに前回のレコードが見つからなければ、削除されたデバイスとみなす
+                    string sTemp = string.Format("Del Device ID: {0}", usbDeviceBefore.DeviceID);
+                    AddMessage(nowTime + sTemp + Environment.NewLine);
+                    AddListView(nowTime, "Del", usbDeviceBefore);
+                }
+            }
+
             AddMessage(Environment.NewLine);        //可読性のため空行追加
             usbDevicesBefore = usbDevices;          //デバイス一覧を更新
             numBeforeUsbDevices = usbDevices.Count;
