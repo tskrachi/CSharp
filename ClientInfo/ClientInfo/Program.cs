@@ -1,5 +1,4 @@
 ﻿using System;
-
 using System.Runtime.InteropServices;
 
 namespace ClientInfo
@@ -39,7 +38,6 @@ namespace ClientInfo
             WTSSessionAddressV4,
             WTSIsRemoteSession
         };
-        public const int CLIENTNAME_LENGTH = 1;
         [StructLayout(LayoutKind.Sequential)]
         public struct WTSCLIENT
         {
@@ -77,9 +75,8 @@ namespace ClientInfo
             IntPtr hServer,                 // [in]
             uint SessionId,                 // [in]
             WTS_INFO_CLASS WTSInfoClass,    // [in]
-            //[MarshalAs(UnmanagedType.LPStr)] out string ppBuffer,
-            out IntPtr ppBuffer,                // [out]
-            out uint pBytesReturned
+            out IntPtr ppBuffer,            // [out]
+            out uint pBytesReturned         // [out]
             );
         [DllImport("Wtsapi32.dll")]
         public static extern void WTSFreeMemory(
@@ -88,36 +85,35 @@ namespace ClientInfo
     }
     class Program
     {
-
-
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-
+            bool ret;
             IntPtr ppBuffer;
             uint dwSize;
 
-            bool ret = NativeMethods.WTSQuerySessionInformation(
+            // ドメイン名の取得
+            ret = NativeMethods.WTSQuerySessionInformation(
                 IntPtr.Zero,
                 uint.MaxValue,
                 NativeMethods.WTS_INFO_CLASS.WTSDomainName,
                 out ppBuffer,
-                out dwSize
-                );
+                out dwSize);
+
             if (ret)
             {
                 if (dwSize > 0)
                 {
                     string domainname = Marshal.PtrToStringAnsi(ppBuffer);
-                    Console.WriteLine(domainname);
+                    Console.WriteLine($"DomainName: {domainname}");
                 }
                 NativeMethods.WTSFreeMemory(ppBuffer);
             }
 
+            // ClientProtocolTypeの取得
             ret = NativeMethods.WTSQuerySessionInformation(
                 IntPtr.Zero,
                 uint.MaxValue,
-                NativeMethods.WTS_INFO_CLASS.WTSClientInfo,
+                NativeMethods.WTS_INFO_CLASS.WTSClientProtocolType,
                 out ppBuffer,
                 out dwSize
                 );
@@ -125,12 +121,35 @@ namespace ClientInfo
             {
                 if (dwSize > 0)
                 {
-                    NativeMethods.WTSCLIENT cInfo = (NativeMethods.WTSCLIENT)Marshal.PtrToStructure(ppBuffer, typeof(NativeMethods.WTSCLIENT));
-                    Console.WriteLine(cInfo.ClientAddress);
+                    ushort protocolType = (ushort)Marshal.ReadInt16(ppBuffer);
+                    Console.WriteLine($"ClientProtocolType: {protocolType}");
                 }
                 NativeMethods.WTSFreeMemory(ppBuffer);
             }
 
+            // ClientInfoの取得
+            ret = NativeMethods.WTSQuerySessionInformation(
+                IntPtr.Zero,
+                uint.MaxValue,
+                NativeMethods.WTS_INFO_CLASS.WTSClientInfo,
+                out ppBuffer,
+                out dwSize);
+            if (ret)
+            {
+                if (dwSize > 0)
+                {
+                    NativeMethods.WTSCLIENT cInfo = (NativeMethods.WTSCLIENT)Marshal.PtrToStructure(ppBuffer, typeof(NativeMethods.WTSCLIENT));
+
+                    string clientName;
+                    clientName = System.Text.Encoding.ASCII.GetString(cInfo.ClientName);
+                    clientName = clientName.TrimEnd('\0');
+                    Console.WriteLine($"ClientName: {clientName}");
+                    Console.WriteLine($"AddressFamily: {cInfo.ClientAddressFamily}");
+                    string ipAddress = $"IP Address: {cInfo.ClientAddress[0]}.{cInfo.ClientAddress[1]}.{cInfo.ClientAddress[2]}.{cInfo.ClientAddress[3]}";
+                    Console.WriteLine(ipAddress);
+                }
+                NativeMethods.WTSFreeMemory(ppBuffer);
+            }
         }
     }
 }
